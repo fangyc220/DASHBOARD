@@ -3,11 +3,11 @@ import pandas as pd
 DATA_PATH = 'data.xlsx'
 ALL_DATA = 'all_data.xlsx'
 
-
-def main():
-    raw_data = pd.read_excel(DATA_PATH)
-    p_data = process_data(raw_data)
-    print(p_data.head())
+#
+# def main():
+#     raw_data = pd.read_excel(DATA_PATH)
+#     p_data = process_data(raw_data)
+#     p_data.to_excel("output.xlsx")
 
 
 def get_all_production_num():
@@ -23,7 +23,7 @@ def get_all_production_num():
     return p_all_data
 
 
-def process_data(raw_data):
+def process_data(raw_data=pd.read_excel(DATA_PATH)):
     data = {}
     all_production_num = get_all_production_num()
     for i in range(len(raw_data)):
@@ -47,5 +47,5 @@ def process_data(raw_data):
     return data
 
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()
