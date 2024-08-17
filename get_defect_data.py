@@ -2,8 +2,11 @@ import pandas as pd
 from datetime import datetime
 import requests
 from bs4 import BeautifulSoup
-import selenium
-import logging
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import Select
+from selenium.webdriver.chrome.options import Options
+import time
 
 WEEKLY_WORK_LIST = '每週射出完工單.xlsx'
 GET_ITEMS = ['製令單號', '機種代號', '完工日期', '完工數量', '批    號']
@@ -25,7 +28,34 @@ MD052408310030    20240810  20649-102     MDTMS240901005-00      120        氣�
 def main():
     # working_data = input_data(WEEKLY_WORK_LIST)
     # logging.basicConfig(level=logging.DEBUG)
-    get_defect_num()
+    driver = webdriver.Chrome()
+    driver.get(CHECK_LOGIN_URL)
+    driver.implicitly_wait(3)
+
+    username = 'PY310'
+    password = '1'
+
+    username_input = driver.find_element(By.NAME, 'ID')
+    username_input.send_keys(username)
+    password_input = driver.find_element(By.NAME, 'PWD')
+    password_input.send_keys(password)
+    login_button = driver.find_element(By.NAME, 'Button')
+    login_button.click()
+    driver.implicitly_wait(2)
+
+    driver.get('http://erpweb1.pyramids.com.tw/Bart_prj/TMS/BadRecord/BadRecord.aspx?user_id=PY310&user_pw=1&Page1=1&Rnd=+')
+    dropdown_ele = driver.find_element(By.NAME, 'DropDownList3')
+    select = Select(dropdown_ele)
+    select.select_by_value('-1')
+    soup = BeautifulSoup(driver.page_source, features='html.parser')
+    tags = soup.find_all('tr', style=lambda value: value and 'background' in value)
+    for tag in tags:
+        tokens = tag.text.strip().split()
+        print(tokens)
+        if len(tokens) > 3:
+            print('製令單號 --> ', tokens[0], '完工日期 --> ', tokens[3][0:10])
+
+    time.sleep(3)
 
 
 def get_defect_num(data=None):
