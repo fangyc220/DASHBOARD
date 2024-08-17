@@ -5,7 +5,6 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
-from selenium.webdriver.chrome.options import Options
 import time
 
 WEEKLY_WORK_LIST = '每週射出完工單.xlsx'
@@ -53,47 +52,19 @@ def main():
         tokens = tag.text.strip().split()
         print(tokens)
         if len(tokens) > 3:
-            print('製令單號 --> ', tokens[0], '完工日期 --> ', tokens[3][0:10])
+            date = trans_date_foam(tokens[3][0:10])
+            defect_url = URL1 + tokens[0] + URL2 + date
+            # print('製令單號 --> ', tokens[0], '完工日期 --> ', tokens[3][0:10])
+            driver.get(defect_url)
+            soup = BeautifulSoup(driver.page_source, features='html.parser')
+            print(soup.text)
+            time.sleep(2)
 
-    time.sleep(3)
 
-
-def get_defect_num(data=None):
-    def check_login_required():
-        response = requests.get(CHECK_LOGIN_URL)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        login_info = soup.find_all('input', {'name': 'ID'})
-        if login_info:
-            return True
-        return False
-
-    if check_login_required():
-        print('==' * 30)
-        print('=== 需要登入帳號密碼 ===')
-        print('==' * 30)
-        username = str(input('輸入工號: '))
-        password = str(input('輸入密碼: '))
-        session = requests.Session()
-        login_data = {
-            'ID': username,
-            'PWD': password
-        }
-        # response = session.post(CHECK_LOGIN_URL, data=login_data)
-        response = requests.get(CHECK_LOGIN_URL, params=login_data)
-        response = requests.get(URL_TEST)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        print(soup.text)
-        # print(response.text)
-        return session if response.ok else None
-    # else:
-    #     for i in range(len(data)):
-    #         url = URL1 + data.iloc[i]['製令單號'] + URL2 + data.iloc[i]['完工日期']
-    #         response = requests.get(url)
-    #         soup = BeautifulSoup(response.text, 'html.parser')
-    #         """
-    #         TODO: 開始爬蟲抓取資料
-    #         data = soup.find_all('div', class='content')
-    #         """
+def trans_date_foam(date):
+    date_obj = datetime.strptime(date, '%Y-%m-%d')
+    new_date = date_obj.strftime('%Y%m%d')
+    return new_date
 
 
 def input_data(path):
