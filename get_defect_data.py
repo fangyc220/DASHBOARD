@@ -1,32 +1,24 @@
 import pandas as pd
 from datetime import datetime
-import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
-import time
 
 WEEKLY_WORK_LIST = '每週射出完工單.xlsx'
 GET_ITEMS = ['製令單號', '機種代號', '完工日期', '完工數量', '批    號']
 CHECK_LOGIN_URL = 'http://erpweb.pyramids.com.tw/index1.htm'
-URL_TEST = 'http://erpweb1.pyramids.com.tw/Bart_prj/TMS/BadRecord/BadRecordRe.aspx?Com=C1&TypeNo=MX052407260005&StartDate=20240815'
 URL1 = 'http://erpweb1.pyramids.com.tw/Bart_prj/TMS/BadRecord/BadRecordRe.aspx?Com=C1&TypeNo='
 URL2 = '&StartDate='
 
 """
-
 製令單號            完工日期      品號              批號           完工數量     不良原因    不良數量
 MD052408310030    20240810  20649-102     MDTMS240901001-00      100        氣泡        3
 MD052408310030    20240810  20649-102     MDTMS240901005-00      120        氣泡        3
-
-
 """
 
 
 def main():
-    # working_data = input_data(WEEKLY_WORK_LIST)
-    # logging.basicConfig(level=logging.DEBUG)
     driver = webdriver.Chrome()
     driver.get(CHECK_LOGIN_URL)
     driver.implicitly_wait(3)
@@ -48,17 +40,62 @@ def main():
     select.select_by_value('-1')
     soup = BeautifulSoup(driver.page_source, features='html.parser')
     tags = soup.find_all('tr', style=lambda value: value and 'background' in value)
+    defect_dict = {}
     for tag in tags:
         tokens = tag.text.strip().split()
-        print(tokens)
         if len(tokens) > 3:
             date = trans_date_foam(tokens[3][0:10])
             defect_url = URL1 + tokens[0] + URL2 + date
-            # print('製令單號 --> ', tokens[0], '完工日期 --> ', tokens[3][0:10])
             driver.get(defect_url)
             soup = BeautifulSoup(driver.page_source, features='html.parser')
-            print(soup.text)
-            time.sleep(2)
+            defect_tags = soup.find_all('tr', style=lambda value: value and 'background' in value and len(value) < 30)
+            [get_defect_dict(defect_dict, defect_tag) if defect_tag.text.strip() not in defect_dict else None for defect_tag in defect_tags]
+
+    print(defect_dict)
+    weekly_work_excel_clean()
+    insert_defect_num_to_excel(defect_dict)
+
+
+def weekly_work_excel_clean():
+    weekly_data = pd.read_excel(WEEKLY_WORK_LIST)
+    columns = weekly_data.iloc[2]
+    weekly_data = weekly_data.iloc[3:]
+    weekly_data = weekly_data.rename(columns=columns)
+    weekly_data.reset_index(inplace=True, drop=True)
+    weekly_data['INDEX_KEY'] = [str(weekly_data['製令單號'].iloc[i]) + str(weekly_data['完工日期'].iloc[i]) for i in range(len(weekly_data))]
+    print(weekly_data)
+
+def insert_defect_num_to_excel(dic):
+    pass
+
+
+def get_defect_dict(defect_dict, defect_tag):
+    """
+    defect_dice[MD05240515001628384 REV.A 2024-08-13起蒼2] = {
+        '製令單號': 'MD052405150016',
+        '品號': '28384 REV.A',
+        '完工日期': '2024-08-13',
+        '不良項目': '起蒼',
+        '不良數': '2'
+    }
+    """
+    defect_dict[defect_tag.text.strip()] = {}
+    defect_lst = defect_tag.text.strip().split(' ')
+    defect_dict[defect_tag.text.strip()]['製令單號'] = defect_lst[0][:14]
+    defect_dict[defect_tag.text.strip()]['品號'] = defect_lst[0][14:] + ' ' + defect_lst[1]
+    defect_dict[defect_tag.text.strip()]['完工日期'] = defect_lst[2][:10]
+    defect_dict[defect_tag.text.strip()]['不良項目'] = get_defect_item_and_num(defect_lst[2][10:])[0]
+    defect_dict[defect_tag.text.strip()]['不良數'] = get_defect_item_and_num(defect_lst[2][10:])[1]
+
+
+def get_defect_item_and_num(defect_str):
+    defect_item, defect_num = '', ''
+    for ch in defect_str:
+        if ch.isdigit():
+            defect_num += ch
+        else:
+            defect_item += ch
+    return defect_item, defect_num
 
 
 def trans_date_foam(date):
@@ -81,65 +118,6 @@ def input_data(path):
         new_date = date_obj.strftime('%Y%m%d')
         data.iloc[i]['完工日期'] = new_date
     return data
-
-
-"""
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
-import requests
-
-# 1. 使用 Selenium 登錄網站
-# 設置 WebDriver（這裡使用 ChromeDriver）
-driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
-
-# 打開登錄頁面
-driver.get("http://example.com/login")
-
-# 找到用戶名和密碼輸入框並填寫
-username_input = driver.find_element(By.NAME, "username")
-password_input = driver.find_element(By.NAME, "password")
-
-username_input.send_keys("your_username")
-password_input.send_keys("your_password")
-
-# 找到登錄按鈕並點擊
-login_button = driver.find_element(By.XPATH, "//button[@type='submit']")
-login_button.click()
-
-# 等待頁面加載
-driver.implicitly_wait(10)
-
-# 2. 獲取登錄後的 cookies
-cookies = driver.get_cookies()
-
-# 關閉瀏覽器
-driver.quit()
-
-# 3. 使用 requests 和這些 cookies 來抓取數據
-# 轉換 cookies 格式以便使用在 requests 中
-session_cookies = {cookie['name']: cookie['value'] for cookie in cookies}
-
-# 使用 session 來保持會話狀態
-session = requests.Session()
-session.cookies.update(session_cookies)
-
-# 發送 GET 請求到目標頁面
-target_url = "http://example.com/target-page"
-response = session.get(target_url)
-
-# 檢查響應狀態並處理頁面數據
-if response.status_code == 200:
-    print(response.text)  # 這裡可以使用 BeautifulSoup 進行進一步的數據處理
-else:
-    print(f"抓取失敗，狀態碼: {response.status_code}")
-
-
-
-"""
-
-
 
 
 if __name__ == '__main__':
