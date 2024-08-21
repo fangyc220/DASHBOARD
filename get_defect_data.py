@@ -52,6 +52,19 @@ def main():
             [get_defect_dict(defect_dict, defect_tag) if defect_tag.text.strip() not in defect_dict else None for defect_tag in defect_tags]
 
     print(defect_dict)
+
+    """
+    {
+    'MD05240515001628384 REV.A 2024-08-13起蒼2': {'製令單號': 'MD052405150016', '品號': '28384 REV.A', '完工日期': '2024-08-13', '不良項目': '起蒼', '不良數': '2'}, 
+    'MD05240521002123297 REV.A 2024-08-01撞傷7': {'製令單號': 'MD052405210021', '品號': '23297 REV.A', '完工日期': '2024-08-01', '不良項目': '撞傷', '不良數': '7'}, 
+    'MD05240521002123297 REV.A 2024-08-02撞傷8': {'製令單號': 'MD052405210021', '品號': '23297 REV.A', '完工日期': '2024-08-02', '不良項目': '撞傷', '不良數': '8'}, 
+    'MD05240722002028478 REV.02 2024-08-01刮傷110': {'製令單號': 'MD052407220020', '品號': '28478 REV.02', '完工日期': '2024-08-01', '不良項目': '刮傷', '不良數': '110'}, 
+    'MX052407260005303-1716 REV.2 2024-08-15其他27': {'製令單號': 'MX052407260005', '品號': '303-1716 REV.2', '完工日期': '2024-08-15', '不良項目': '其他', '不良數': '27'}
+    }
+    
+    """
+
+
     weekly_work_excel_clean()
     insert_defect_num_to_excel(defect_dict)
 
@@ -63,7 +76,7 @@ def weekly_work_excel_clean():
     weekly_data = weekly_data.rename(columns=columns)
     weekly_data.reset_index(inplace=True, drop=True)
     weekly_data['INDEX_KEY'] = [str(weekly_data['製令單號'].iloc[i]) + str(weekly_data['完工日期'].iloc[i]) for i in range(len(weekly_data))]
-    print(weekly_data)
+    # print(weekly_data)
 
 def insert_defect_num_to_excel(dic):
     pass
