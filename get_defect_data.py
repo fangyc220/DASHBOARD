@@ -19,40 +19,22 @@ MD052408310030    20240810  20649-102     MDTMS240901005-00      120        氣�
 
 
 def main():
-    # driver = webdriver.Chrome()
-    # driver.get(CHECK_LOGIN_URL)
-    # driver.implicitly_wait(3)
-    #
-    # username = 'PY310'
-    # password = '1'
-    #
-    # username_input = driver.find_element(By.NAME, 'ID')
-    # username_input.send_keys(username)
-    # password_input = driver.find_element(By.NAME, 'PWD')
-    # password_input.send_keys(password)
-    # login_button = driver.find_element(By.NAME, 'Button')
-    # login_button.click()
-    # driver.implicitly_wait(2)
-    #
-    # driver.get('http://erpweb1.pyramids.com.tw/Bart_prj/TMS/BadRecord/BadRecord.aspx?user_id=PY310&user_pw=1&Page1=1&Rnd=+')
-    # dropdown_ele = driver.find_element(By.NAME, 'DropDownList3')
-    # select = Select(dropdown_ele)
-    # select.select_by_value('-1')
-    # soup = BeautifulSoup(driver.page_source, features='html.parser')
-    # tags = soup.find_all('tr', style=lambda value: value and 'background' in value)
-    # defect_dict = {}
-    # for tag in tags:
-    #     tokens = tag.text.strip().split()
-    #     if len(tokens) > 3:
-    #         date = trans_date_foam(tokens[3][0:10])
-    #         defect_url = URL1 + tokens[0] + URL2 + date
-    #         driver.get(defect_url)
-    #         soup = BeautifulSoup(driver.page_source, features='html.parser')
-    #         defect_tags = soup.find_all('tr', style=lambda value: value and 'background' in value and len(value) < 30)
-    #         [get_defect_dict(defect_dict, defect_tag) if defect_tag.text.strip() not in defect_dict else None for defect_tag in defect_tags]
-    #
-    # print(defect_dict)
+    # defect_data = get_defect_data_from_web()
+    defect_data = {
+    'MD05240515001628384 REV.A 2024-08-13起蒼2': {'製令單號': 'MD052405150016', '品號': '28384 REV.A', '完工日期': '2024-08-13', '不良項目': '起蒼', '不良數': '2'},
+    'MD05240521002123297 REV.A 2024-08-01撞傷7': {'製令單號': 'MD052405210021', '品號': '23297 REV.A', '完工日期': '2024-08-01', '不良項目': '撞傷', '不良數': '7'},
+    'MD05240521002123297 REV.A 2024-08-02撞傷8': {'製令單號': 'MD052405210021', '品號': '23297 REV.A', '完工日期': '2024-08-02', '不良項目': '撞傷', '不良數': '8'},
+    'MD05240722002028478 REV.02 2024-08-01刮傷110': {'製令單號': 'MD052407220020', '品號': '28478 REV.02', '完工日期': '2024-08-01', '不良項目': '刮傷', '不良數': '110'},
+    'MX052407260005303-1716 REV.2 2024-08-15其他27': {'製令單號': 'MX052407260005', '品號': '303-1716 REV.2', '完工日期': '2024-08-15', '不良項目': '其他', '不良數': '27'},
+    'MX052407260005303-1716 REV.2 2024-08-15黑點11': {'製令單號': 'MX052407260005', '品號': '303-1716 REV.2', '完工日期': '2024-08-15', '不良項目': '黑點', '不良數': '11'},
+    'MX052407260005303-1716 REV.2 2024-08-15混色不均177': {'製令單號': 'MX052407260005', '品號': '303-1716 REV.2', '完工日期': '2024-08-15', '不良項目': '混色不均', '不良數': '177'},
 
+    }
+    weekly_data = weekly_work_excel_clean(defect_data)
+    print(weekly_data.head(10))
+
+
+def get_defect_data_from_web():
     """
     {
     'MD05240515001628384 REV.A 2024-08-13起蒼2': {'製令單號': 'MD052405150016', '品號': '28384 REV.A', '完工日期': '2024-08-13', '不良項目': '起蒼', '不良數': '2'},
@@ -63,23 +45,39 @@ def main():
     }
 
     """
+    driver = webdriver.Chrome()
+    driver.get(CHECK_LOGIN_URL)
+    driver.implicitly_wait(3)
 
-    defect_dict = {
-    'MD05240515001628384 REV.A 2024-08-13起蒼2': {'製令單號': 'MD052405150016', '品號': '28384 REV.A', '完工日期': '2024-08-13', '不良項目': '起蒼', '不良數': '2'},
-    'MD05240521002123297 REV.A 2024-08-01撞傷7': {'製令單號': 'MD052405210021', '品號': '23297 REV.A', '完工日期': '2024-08-01', '不良項目': '撞傷', '不良數': '7'},
-    'MD05240521002123297 REV.A 2024-08-02撞傷8': {'製令單號': 'MD052405210021', '品號': '23297 REV.A', '完工日期': '2024-08-02', '不良項目': '撞傷', '不良數': '8'},
-    'MD05240722002028478 REV.02 2024-08-01刮傷110': {'製令單號': 'MD052407220020', '品號': '28478 REV.02', '完工日期': '2024-08-01', '不良項目': '刮傷', '不良數': '110'},
-    'MX052407260005303-1716 REV.2 2024-08-15其他27': {'製令單號': 'MX052407260005', '品號': '303-1716 REV.2', '完工日期': '2024-08-15', '不良項目': '其他', '不良數': '27'},
-    'MD05240515001628384 REV.A 2024-08-13黑點7': {'製令單號': 'MD052405150016', '品號': '28384 REV.A', '完工日期': '2024-08-13', '不良項目': '黑點', '不良數': '7'},
-    'MD05240515001628384 REV.A 2024-08-13混色不均19': {'製令單號': 'MD052405150016', '品號': '28384 REV.A', '完工日期': '2024-08-13', '不良項目': '混色不均', '不良數': '19'},
+    username = 'PY310'
+    password = '1'
 
-    }
+    username_input = driver.find_element(By.NAME, 'ID')
+    username_input.send_keys(username)
+    password_input = driver.find_element(By.NAME, 'PWD')
+    password_input.send_keys(password)
+    login_button = driver.find_element(By.NAME, 'Button')
+    login_button.click()
+    driver.implicitly_wait(2)
 
-    weekly_data = weekly_work_excel_clean(defect_dict)
-    print(weekly_data.loc[126])
-    print(weekly_data.loc[134])
-    print(weekly_data.loc[113])
+    driver.get('http://erpweb1.pyramids.com.tw/Bart_prj/TMS/BadRecord/BadRecord.aspx?user_id=PY310&user_pw=1&Page1=1&Rnd=+')
+    dropdown_ele = driver.find_element(By.NAME, 'DropDownList3')
+    select = Select(dropdown_ele)
+    select.select_by_value('-1')
+    soup = BeautifulSoup(driver.page_source, features='html.parser')
+    tags = soup.find_all('tr', style=lambda value: value and 'background' in value)
+    defect_dict = {}
+    for tag in tags:
+        tokens = tag.text.strip().split()
+        if len(tokens) > 3:
+            date = trans_date_foam(tokens[3][0:10])
+            defect_url = URL1 + tokens[0] + URL2 + date
+            driver.get(defect_url)
+            soup = BeautifulSoup(driver.page_source, features='html.parser')
+            defect_tags = soup.find_all('tr', style=lambda value: value and 'background' in value and len(value) < 30)
+            [get_defect_dict(defect_dict, defect_tag) if defect_tag.text.strip() not in defect_dict else None for defect_tag in defect_tags]
 
+    return defect_dict
 
 
 def weekly_work_excel_clean(defect_dict):
@@ -93,19 +91,13 @@ def weekly_work_excel_clean(defect_dict):
     working_num = working_num.merge(weekly_data[['製令單號', '機種代號']], on='製令單號', how='left')  # 依照製令單號，把品號補回來
     working_num.drop_duplicates(subset=['製令單號', '完工日期'], inplace=True)  # 在merge時會有重覆的狀況，因此移除相同的製令單號、完工日期的rows
     working_num.reset_index(drop=True, inplace=True)
-    """
-                       製令單號                 完工日期      完工數量                     機種代號
-    0    MD052310310276  2024-08-06 00:00:00      1100        15171-103 REV.D_T
-    1    MD052310310276  2024-08-07 00:00:00      1050        15171-103 REV.D_T
-    2    MD052310310276  2024-08-08 00:00:00  77883179        15171-103 REV.D_T
-    3    MD052310310276  2024-08-09 00:00:00      1800        15171-103 REV.D_T
-    4    MD052310310277  2024-08-05 00:00:00      1700  15171-103 REV.D_T-PRINT
-    """
 
     working_num['不良項目'] = pd.NA
     working_num['不良數'] = 0
 
     insert_defect_num_to_excel(defect_dict, working_num)
+    working_num.sort_values(by='不良率 (%)', ascending=False, inplace=True)
+    working_num['all_info'] = working_num['機種代號'] + ', ' + working_num['不良項目']
     return working_num
 
 
@@ -127,7 +119,10 @@ def insert_defect_num_to_excel(defect_dict, working_num_date):
         for index in all_index_for_add_num.tolist():
             working_num_date.loc[index, '完工數量'] += int(defect_dict[key]['不良數'])
 
-    working_num_date['不良率 (%)'] = (working_num_date['不良數'].astype('int') / working_num_date['完工數量']) * 100
+    working_num_date['不良率 (%)'] = ((working_num_date['不良數'].astype('int') / working_num_date['完工數量']) * 100).astype(float).round(2)
+    for i in range(len(working_num_date)):
+        if isinstance(working_num_date.loc[i, '完工日期'], datetime):
+            working_num_date.loc[i, '完工日期'] = working_num_date.loc[i, '完工日期'].strftime('%Y-%m-%d')
 
 
 def get_defect_dict(defect_dict, defect_tag):
