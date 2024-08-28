@@ -1,9 +1,10 @@
-from dash import Dash, html, dash_table, dcc
+import dash
+from dash import dcc, html, dash_table
+import dash_bootstrap_components as dbc
 import plotly.express as px
-import pandas as pd
-
 import get_defect_data
 
+# 數據
 defect_data = {
     'MD05240515001628384 REV.A 2024-08-13起蒼2': {'製令單號': 'MD052405150016', '品號': '28384 REV.A', '完工日期': '2024-08-13',
                                                 '不良項目': '起蒼', '不良數': '2'},
@@ -21,30 +22,61 @@ defect_data = {
                                                        '完工日期': '2024-08-15', '不良項目': '混色不均', '不良數': '177'},
 
 }
-
 df = get_defect_data.weekly_work_excel_clean(defect_data)
-app = Dash()
 columns = ['機種代號', '完工日期', '不良項目', '不良數', '不良率 (%)']
 
-app.layout = html.Div([
-    dash_table.DataTable(data=df[columns].to_dict('records'), page_size=10,
-                         style_cell={
-                             'textAlign': 'left'
-                         },
-                         style_data={
-                             'whiteSpace': 'normal',
-                             'height': 'auto',
-                         }
-                         ),
-    # dcc.Graph(figure=px.histogram(df, x=['機種代號', '完工日期'], y='不良率 (%)'))
-    dcc.Graph(
-        id='不良趨勢圖',
-        figure=px.bar(df, x='完工日期', y='不良率 (%)', color='all_info', barmode='group',
-                      labels={'不良率 (%)': '不良率 (%)', '完工日期': '完工日期'},
-                      title='每日不良趨勢'
-                      )
-    )
-])
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+
+app.layout = dbc.Container([
+    html.H1("TMS每日不良統計", className="mt-4 mb-4"),
+    dbc.Card([
+        dbc.CardHeader("每日不良統計"),
+        dbc.CardBody([
+            dcc.Graph(
+                id='不良趨勢圖',
+                figure=px.bar(df, x='完工日期', y='不良率 (%)', color='all_info', barmode='group',
+                              labels={'不良率 (%)': '不良率 (%)', '完工日期': '完工日期', 'all_info': '品號 / 不良項目'},
+                              title='每日不良趨勢'
+                              )
+                )
+        ]),
+    ], style={'margin-bottom': '20px'}),
+
+    dbc.Card([
+        dbc.CardHeader('不良明細表'),
+        dbc.CardBody([
+            dash_table.DataTable(
+                    data=df[columns].to_dict('records'),
+                    page_size=10,
+                    style_cell={
+                         'textAlign': 'center',
+                         'width': '10px',
+                         'minWidth': '3px',
+                         'maxWidth': '8px'
+                                },
+                    style_table={
+                         'whiteSpace': 'normal',
+                         'height': '350px',
+                         'width': '1550px',
+                         'overflow': 'auto',
+                         'margin-left': '70px'
+                                },
+                    id='不良明細表',
+                    style_data_conditional=[
+                        {
+                            'if': {
+                                'filter_query': '{不良率 (%)} > 2',
+                                'column_id': columns,
+                            },
+                            'color': 'red',
+                            'fontWeight': 'bold'
+                        }
+                    ]
+            )
+        ])
+    ])
+], fluid=True)
+
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run_server(debug=True)
