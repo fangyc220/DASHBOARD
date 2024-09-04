@@ -28,10 +28,11 @@ def main():
     'MX052407260005303-1716 REV.2 2024-08-15其他27': {'製令單號': 'MX052407260005', '品號': '303-1716 REV.2', '完工日期': '2024-08-15', '不良項目': '其他', '不良數': '27'},
     'MX052407260005303-1716 REV.2 2024-08-15黑點11': {'製令單號': 'MX052407260005', '品號': '303-1716 REV.2', '完工日期': '2024-08-15', '不良項目': '黑點', '不良數': '11'},
     'MX052407260005303-1716 REV.2 2024-08-15混色不均177': {'製令單號': 'MX052407260005', '品號': '303-1716 REV.2', '完工日期': '2024-08-15', '不良項目': '混色不均', '不良數': '177'},
-
+    'MD05240806000417878 REV.C-CLEAN 2024-08-06縮水22': {'製令單號': 'MD052408060004', '品號': '17878 REV.C-CLEAN','完工日期': '2024-08-06', '不良項目': '縮水', '不良數': '22'},
+    'MD05240806000417878 REV.C-CLEAN 2024-08-06縮水50': {'製令單號': 'MD052408060004', '品號': '17878 REV.C-CLEAN','完工日期': '2024-08-06', '不良項目': '縮水', '不良數': '50'}
     }
     weekly_data = weekly_work_excel_clean(defect_data)
-    print(weekly_data.head(10))
+    # print(weekly_data.head(10))
 
 
 def get_defect_data_from_web():
@@ -81,6 +82,28 @@ def get_defect_data_from_web():
 
 
 def weekly_work_excel_clean(defect_dict):
+    """
+    :param defect_dict:
+    :return: working_num, total_working_num
+
+    working_num = (細分每日的不良狀況, 比較細項一點)
+                   製令單號        完工日期    完工數量  ...  不良數 不良率 (%)               all_info
+    134  MX052407260005  2024-08-15  3603.0  ...  177    4.91   303-1716 REV.2, 混色不均
+    135  MD052408060004  2024-08-06  5770.0  ...   50    0.87  17878 REV.C-CLEAN, 縮水
+    126  MX052407260005  2024-08-15  3603.0  ...   27    0.75     303-1716 REV.2, 其他
+    124  MD052408060004  2024-08-06  5770.0  ...   22    0.38  17878 REV.C-CLEAN, 縮水
+    133  MX052407260005  2024-08-15  3603.0  ...   11    0.31     303-1716 REV.2, 黑點
+    74   MD052405150016  2024-08-13  5568.0  ...    2    0.04        28384 REV.A, 起蒼
+
+    total_working_num = (把相同的製令、相同的不良項目相加)
+             製令單號               機種代號  不良項目  不良數    完工數量   不良率 (%)
+    0  MD052405150016        28384 REV.A    起蒼    2  5566.0   0.03592
+    1  MD052408060004  17878 REV.C-CLEAN    縮水   72  5798.0  1.226576
+    2  MX052407260005     303-1716 REV.2    其他   27  3388.0   0.79063
+    3  MX052407260005     303-1716 REV.2  混色不均  177  3388.0  4.964937
+    4  MX052407260005     303-1716 REV.2    黑點   11  3388.0  0.323625
+
+    """
     need_columns = ['製令單號', '機種代號', '完工日期', '完工數量', '批    號']
     weekly_data = pd.read_excel(WEEKLY_WORK_LIST)
     columns = weekly_data.iloc[2]
@@ -98,22 +121,36 @@ def weekly_work_excel_clean(defect_dict):
     insert_defect_num_to_excel(defect_dict, working_num)
     working_num.sort_values(by='不良率 (%)', ascending=False, inplace=True)
     working_num['all_info'] = working_num['機種代號'] + ', ' + working_num['不良項目']
-    return working_num
+
+    total_columns = ['製令單號', '機種代號', '不良項目', '不良數']
+    total_working_num = working_num[total_columns]
+    production_num = weekly_data.groupby(['製令單號'])['完工數量'].sum().reset_index()
+
+    total_working_num['不良數'] = pd.to_numeric(total_working_num['不良數'], errors='coerce').astype(int)
+    total_working_num = total_working_num.groupby(['製令單號', '機種代號', '不良項目'])['不良數'].sum().reset_index()
+    total_working_num = total_working_num.merge(production_num[['製令單號', '完工數量']], on='製令單號', how='left')
+    total_working_num['不良率 (%)'] = (total_working_num['不良數'] / (total_working_num['不良數'] + total_working_num['完工數量'])) * 100
+    return working_num, total_working_num
 
 
 def insert_defect_num_to_excel(defect_dict, working_num_date):
     for key in defect_dict:
         number = defect_dict[key]['製令單號']
         date = pd.to_datetime(defect_dict[key]['完工日期'])
+        defect_item = defect_dict[key]['不良項目']
         get_index = working_num_date.loc[(working_num_date['製令單號'] == number) & (working_num_date['完工日期'] == date)].index
         if len(get_index) > 0 and working_num_date.loc[get_index.tolist()[0], '不良數'] == 0:
             working_num_date.loc[get_index.tolist()[0], '不良項目'] = defect_dict[key]['不良項目']
-            working_num_date.loc[get_index.tolist()[0], '不良數'] = defect_dict[key]['不良數']
+            working_num_date.loc[get_index.tolist()[0], '不良數'] = int(defect_dict[key]['不良數'])
         elif len(get_index) > 0 and working_num_date.loc[get_index.tolist()[0], '不良數'] != 0:
-            new_index = len(working_num_date)
-            working_num_date.loc[new_index] = working_num_date.loc[get_index.tolist()[0]]
-            working_num_date.loc[new_index, '不良項目'] = defect_dict[key]['不良項目']
-            working_num_date.loc[new_index, '不良數'] = defect_dict[key]['不良數']
+            get_index_second_check = working_num_date.loc[(working_num_date['製令單號'] == number) & (working_num_date['完工日期'] == date) & (working_num_date['不良項目'] == defect_item)].index
+            if len(get_index_second_check) > 0:
+                working_num_date.loc[get_index_second_check.tolist()[0], '不良數'] += int(defect_dict[key]['不良數'])
+            elif len(get_index_second_check) == 0:
+                new_index = len(working_num_date)
+                working_num_date.loc[new_index] = working_num_date.loc[get_index.tolist()[0]]
+                working_num_date.loc[new_index, '不良項目'] = defect_dict[key]['不良項目']
+                working_num_date.loc[new_index, '不良數'] = int(defect_dict[key]['不良數'])
 
         all_index_for_add_num = working_num_date.loc[(working_num_date['製令單號'] == number) & (working_num_date['完工日期'] == date)].index
         for index in all_index_for_add_num.tolist():
