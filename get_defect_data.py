@@ -6,33 +6,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 
 WEEKLY_WORK_LIST = '每週射出完工單.xlsx'
-GET_ITEMS = ['製令單號', '機種代號', '完工日期', '完工數量', '批    號']
 CHECK_LOGIN_URL = 'http://erpweb.pyramids.com.tw/index1.htm'
 URL1 = 'http://erpweb1.pyramids.com.tw/Bart_prj/TMS/BadRecord/BadRecordRe.aspx?Com=C1&TypeNo='
 URL2 = '&StartDate='
-
-"""
-製令單號            完工日期      品號              批號           完工數量     不良原因    不良數量
-MD052408310030    20240810  20649-102     MDTMS240901001-00      100        氣泡        3
-MD052408310030    20240810  20649-102     MDTMS240901005-00      120        氣泡        3
-"""
-
-
-def main():
-    # defect_data = get_defect_data_from_web()
-    defect_data = {
-    'MD05240515001628384 REV.A 2024-08-13起蒼2': {'製令單號': 'MD052405150016', '品號': '28384 REV.A', '完工日期': '2024-08-13', '不良項目': '起蒼', '不良數': '2'},
-    'MD05240521002123297 REV.A 2024-08-01撞傷7': {'製令單號': 'MD052405210021', '品號': '23297 REV.A', '完工日期': '2024-08-01', '不良項目': '撞傷', '不良數': '7'},
-    'MD05240521002123297 REV.A 2024-08-02撞傷8': {'製令單號': 'MD052405210021', '品號': '23297 REV.A', '完工日期': '2024-08-02', '不良項目': '撞傷', '不良數': '8'},
-    'MD05240722002028478 REV.02 2024-08-01刮傷110': {'製令單號': 'MD052407220020', '品號': '28478 REV.02', '完工日期': '2024-08-01', '不良項目': '刮傷', '不良數': '110'},
-    'MX052407260005303-1716 REV.2 2024-08-15其他27': {'製令單號': 'MX052407260005', '品號': '303-1716 REV.2', '完工日期': '2024-08-15', '不良項目': '其他', '不良數': '27'},
-    'MX052407260005303-1716 REV.2 2024-08-15黑點11': {'製令單號': 'MX052407260005', '品號': '303-1716 REV.2', '完工日期': '2024-08-15', '不良項目': '黑點', '不良數': '11'},
-    'MX052407260005303-1716 REV.2 2024-08-15混色不均177': {'製令單號': 'MX052407260005', '品號': '303-1716 REV.2', '完工日期': '2024-08-15', '不良項目': '混色不均', '不良數': '177'},
-    'MD05240806000417878 REV.C-CLEAN 2024-08-06縮水22': {'製令單號': 'MD052408060004', '品號': '17878 REV.C-CLEAN','完工日期': '2024-08-06', '不良項目': '縮水', '不良數': '22'},
-    'MD05240806000417878 REV.C-CLEAN 2024-08-06縮水50': {'製令單號': 'MD052408060004', '品號': '17878 REV.C-CLEAN','完工日期': '2024-08-06', '不良項目': '縮水', '不良數': '50'}
-    }
-    weekly_data = weekly_work_excel_clean(defect_data)
-    # print(weekly_data.head(10))
 
 
 def get_defect_data_from_web():
@@ -46,12 +22,18 @@ def get_defect_data_from_web():
     }
 
     """
+    # username = str(input('輸入工號 : '))
+    # password = str(input('輸入密碼 : '))
+
+    username = 'PY310'
+    password = '2'
+
+    data = loading_data()
+    search_month = get_month_from_excel(data)
+
     driver = webdriver.Chrome()
     driver.get(CHECK_LOGIN_URL)
     driver.implicitly_wait(3)
-
-    username = 'PY310'
-    password = '1'
 
     username_input = driver.find_element(By.NAME, 'ID')
     username_input.send_keys(username)
@@ -61,29 +43,37 @@ def get_defect_data_from_web():
     login_button.click()
     driver.implicitly_wait(2)
 
-    driver.get('http://erpweb1.pyramids.com.tw/Bart_prj/TMS/BadRecord/BadRecord.aspx?user_id=PY310&user_pw=1&Page1=1&Rnd=+')
-    dropdown_ele = driver.find_element(By.NAME, 'DropDownList3')
-    select = Select(dropdown_ele)
-    select.select_by_value('-1')
-    soup = BeautifulSoup(driver.page_source, features='html.parser')
-    tags = soup.find_all('tr', style=lambda value: value and 'background' in value)
     defect_dict = {}
-    for tag in tags:
-        tokens = tag.text.strip().split()
-        if len(tokens) > 3:
-            date = trans_date_foam(tokens[3][0:10])
-            defect_url = URL1 + tokens[0] + URL2 + date
-            driver.get(defect_url)
-            soup = BeautifulSoup(driver.page_source, features='html.parser')
-            defect_tags = soup.find_all('tr', style=lambda value: value and 'background' in value and len(value) < 30)
-            [get_defect_dict(defect_dict, defect_tag) if defect_tag.text.strip() not in defect_dict else None for defect_tag in defect_tags]
+    for month in search_month:
+        print(f'開始抓取{month}月不良資料')
+        driver.get('http://erpweb1.pyramids.com.tw/Bart_prj/TMS/BadRecord/BadRecord.aspx?user_id=' + username + '&user_pw=' + password + '&Page1=1&Rnd=+')
+        dropdown_month = driver.find_element(By.NAME, 'DropDownList2')
+        select_month = Select(dropdown_month)
+        select_month.select_by_value(month)
 
-    return defect_dict
+        dropdown_ele = driver.find_element(By.NAME, 'DropDownList3')
+        select = Select(dropdown_ele)
+        select.select_by_value('-1')
+
+        soup = BeautifulSoup(driver.page_source, features='html.parser')
+        tags = soup.find_all('tr', style=lambda value: value and 'background' in value)
+        for tag in tags:
+            tokens = tag.text.strip().split()
+            if len(tokens) > 3:
+                date = trans_date_foam(tokens[3][0:10])
+                defect_url = URL1 + tokens[0] + URL2 + date
+                driver.get(defect_url)
+                soup = BeautifulSoup(driver.page_source, features='html.parser')
+                defect_tags = soup.find_all('tr', style=lambda value: value and 'background' in value and len(value) < 30)
+                [get_defect_dict(defect_dict, defect_tag) if defect_tag.text.strip() not in defect_dict else None for defect_tag in defect_tags]
+        print(f'抓取完畢{month}月不良資料')
+    return defect_dict, data
 
 
-def weekly_work_excel_clean(defect_dict):
+def weekly_work_excel_clean(defect_dict, weekly_data):
     """
-    :param defect_dict:
+    :param defect_dict: dict
+    :param weekly_data: Dataframe
     :return: working_num, total_working_num
 
     working_num = (細分每日的不良狀況, 比較細項一點)
@@ -104,12 +94,12 @@ def weekly_work_excel_clean(defect_dict):
     4  MX052407260005     303-1716 REV.2    黑點   11  3388.0  0.323625
 
     """
-    need_columns = ['製令單號', '機種代號', '完工日期', '完工數量', '批    號']
-    weekly_data = pd.read_excel(WEEKLY_WORK_LIST)
-    columns = weekly_data.iloc[2]
-    weekly_data = weekly_data.iloc[3:]
-    weekly_data = weekly_data.rename(columns=columns)
-    weekly_data = weekly_data[need_columns]
+    # need_columns = ['製令單號', '機種代號', '完工日期', '完工數量', '批    號']
+    # weekly_data = pd.read_excel(WEEKLY_WORK_LIST)
+    # columns = weekly_data.iloc[2]
+    # weekly_data = weekly_data.iloc[3:]
+    # weekly_data = weekly_data.rename(columns=columns)
+    # weekly_data = weekly_data[need_columns]
     working_num = weekly_data.groupby(['製令單號', '完工日期'])['完工數量'].sum().reset_index()  # 依據製令單號、完工日期分類，並且只有sum完工數量的內容
     working_num = working_num.merge(weekly_data[['製令單號', '機種代號']], on='製令單號', how='left')  # 依照製令單號，把品號補回來
     working_num.drop_duplicates(subset=['製令單號', '完工日期'], inplace=True)  # 在merge時會有重覆的狀況，因此移除相同的製令單號、完工日期的rows
@@ -129,7 +119,9 @@ def weekly_work_excel_clean(defect_dict):
     total_working_num['不良數'] = pd.to_numeric(total_working_num['不良數'], errors='coerce').astype(int)
     total_working_num = total_working_num.groupby(['製令單號', '機種代號', '不良項目'])['不良數'].sum().reset_index()
     total_working_num = total_working_num.merge(production_num[['製令單號', '完工數量']], on='製令單號', how='left')
-    total_working_num['不良率 (%)'] = (total_working_num['不良數'] / (total_working_num['不良數'] + total_working_num['完工數量'])) * 100
+    total_working_num['不良率 (%)'] = (total_working_num['不良數'] / (total_working_num['不良數'] + total_working_num['完工數量']) * 100)
+    total_working_num.sort_values(by='不良率 (%)', ascending=False, inplace=True)
+    total_working_num['不良率 (%)'] = total_working_num['不良率 (%)'].apply(lambda x: f"{x:.2f}")
     return working_num, total_working_num
 
 
@@ -156,10 +148,31 @@ def insert_defect_num_to_excel(defect_dict, working_num_date):
         for index in all_index_for_add_num.tolist():
             working_num_date.loc[index, '完工數量'] += int(defect_dict[key]['不良數'])
 
-    working_num_date['不良率 (%)'] = ((working_num_date['不良數'].astype('int') / working_num_date['完工數量']) * 100).astype(float).round(2)
+    working_num_date['不良率 (%)'] = ((working_num_date['不良數'].astype('int') / working_num_date['完工數量']) * 100).astype(float)
+    working_num_date['不良率 (%)'] = working_num_date['不良率 (%)'].apply(lambda x: f"{x:.2f}")
     for i in range(len(working_num_date)):
         if isinstance(working_num_date.loc[i, '完工日期'], datetime):
             working_num_date.loc[i, '完工日期'] = working_num_date.loc[i, '完工日期'].strftime('%Y-%m-%d')
+
+
+def loading_data():
+    need_columns = ['製令單號', '機種代號', '完工日期', '完工數量', '批    號']
+    data = pd.read_excel(WEEKLY_WORK_LIST)
+    columns = data.iloc[2]
+    data = data.iloc[3:]
+    data = data.rename(columns=columns)
+    data = data[need_columns]
+    return data
+
+
+def get_month_from_excel(data):
+    all_month = []
+    for date in data['完工日期']:
+        if type(date) is datetime and '0' in str(date)[5:7]:
+            all_month.append(str(date)[6]) if str(date)[6] not in all_month else None
+        elif type(date) is datetime:
+            all_month.append(str(date)[5:7])
+    return all_month
 
 
 def get_defect_dict(defect_dict, defect_tag):
@@ -195,23 +208,3 @@ def trans_date_foam(date):
     date_obj = datetime.strptime(date, '%Y-%m-%d')
     new_date = date_obj.strftime('%Y%m%d')
     return new_date
-
-
-def input_data(path):
-    data = pd.read_excel(path)
-    cols = data.iloc[2]
-    data = data.iloc[3:len(data) - 1].reset_index(drop=True)
-    cols = {data.columns[i]: cols[i] for i in range(len(cols))}
-    data = data.rename(columns=cols)
-    data = data[GET_ITEMS]
-
-    # 轉變時間格式 2024/8/6 --> 20240806
-    for i in range(len(data)):
-        date_obj = datetime.strptime(str(data.iloc[i]['完工日期'])[0:10], "%Y-%m-%d")
-        new_date = date_obj.strftime('%Y%m%d')
-        data.iloc[i]['完工日期'] = new_date
-    return data
-
-
-if __name__ == '__main__':
-    main()
