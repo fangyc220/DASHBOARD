@@ -122,6 +122,7 @@ def weekly_work_excel_clean(defect_dict, weekly_data):
     total_working_num['不良率 (%)'] = (total_working_num['不良數'] / (total_working_num['不良數'] + total_working_num['完工數量']) * 100)
     total_working_num.sort_values(by='不良率 (%)', ascending=False, inplace=True)
     total_working_num['不良率 (%)'] = total_working_num['不良率 (%)'].apply(lambda x: f"{x:.2f}")
+    total_working_num['繪圖x軸使用'] = total_working_num['機種代號'] + ' / ' + total_working_num['製令單號']
     return working_num, total_working_num
 
 

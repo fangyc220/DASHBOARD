@@ -86,8 +86,8 @@ def display_fig(user_choose, daily_data, weekly_data):
         return df[columns].to_dict('records'), style, fig
     else:
         df = pd.read_json(weekly_data, orient='split')
-        fig = px.bar(df, x='機種代號', y='不良率 (%)', color='不良項目', barmode='group',
-                     labels={'不良率 (%)': '不良率 (%)', '機種代號': '品號'})
+        fig = px.bar(df, x='繪圖x軸使用', y='不良率 (%)', color='不良項目', barmode='group',
+                     labels={'不良率 (%)': '不良率 (%)', '繪圖x軸使用': '品號 / 製令單號'})
         fig.update_layout(legend=dict(font=dict(size=18)))  # 你可以調整這個數值來改變字體大小
         style = [{'if': {'filter_query': '{不良率 (%)} > 2', 'column_id': weekly_columns}, 'color': 'red', 'fontWeight': 'bold'}]
         return df[weekly_columns].to_dict('records'), style, fig
