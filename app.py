@@ -6,7 +6,7 @@ import plotly.express as px
 import get_defect_data
 import pandas as pd
 
-columns = ['機種代號', '完工日期', '不良項目', '不良數', '不良率 (%)']
+columns = ['機種代號', '完工日期', '不良項目', '完工數量', '不良數', '不良率 (%)']
 weekly_columns = ['製令單號', '機種代號', '不良項目', '不良數', '完工數量', '不良率 (%)']
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 

@@ -94,12 +94,6 @@ def weekly_work_excel_clean(defect_dict, weekly_data):
     4  MX052407260005     303-1716 REV.2    黑點   11  3388.0  0.323625
 
     """
-    # need_columns = ['製令單號', '機種代號', '完工日期', '完工數量', '批    號']
-    # weekly_data = pd.read_excel(WEEKLY_WORK_LIST)
-    # columns = weekly_data.iloc[2]
-    # weekly_data = weekly_data.iloc[3:]
-    # weekly_data = weekly_data.rename(columns=columns)
-    # weekly_data = weekly_data[need_columns]
     working_num = weekly_data.groupby(['製令單號', '完工日期'])['完工數量'].sum().reset_index()  # 依據製令單號、完工日期分類，並且只有sum完工數量的內容
     working_num = working_num.merge(weekly_data[['製令單號', '機種代號']], on='製令單號', how='left')  # 依照製令單號，把品號補回來
     working_num.drop_duplicates(subset=['製令單號', '完工日期'], inplace=True)  # 在merge時會有重覆的狀況，因此移除相同的製令單號、完工日期的rows
@@ -107,10 +101,9 @@ def weekly_work_excel_clean(defect_dict, weekly_data):
 
     working_num['不良項目'] = pd.NA
     working_num['不良數'] = 0
+    working_num['總生產數'] = 0
 
     insert_defect_num_to_excel(defect_dict, working_num)
-    working_num.sort_values(by='不良率 (%)', ascending=False, inplace=True)
-    working_num['all_info'] = working_num['機種代號'] + ', ' + working_num['不良項目']
 
     total_columns = ['製令單號', '機種代號', '不良項目', '不良數']
     total_working_num = working_num[total_columns]
@@ -147,13 +140,19 @@ def insert_defect_num_to_excel(defect_dict, working_num_date):
 
         all_index_for_add_num = working_num_date.loc[(working_num_date['製令單號'] == number) & (working_num_date['完工日期'] == date)].index
         for index in all_index_for_add_num.tolist():
-            working_num_date.loc[index, '完工數量'] += int(defect_dict[key]['不良數'])
+            if working_num_date.loc[index, '總生產數'] == 0:
+                working_num_date.loc[index, '總生產數'] = working_num_date.loc[index, '完工數量'] + int(defect_dict[key]['不良數'])
+            else:
+                working_num_date.loc[index, '總生產數'] += int(defect_dict[key]['不良數'])
 
-    working_num_date['不良率 (%)'] = ((working_num_date['不良數'].astype('int') / working_num_date['完工數量']) * 100).astype(float)
+    working_num_date['不良率 (%)'] = ((working_num_date['不良數'].astype('int') / working_num_date['總生產數']) * 100).astype(float)
+    working_num_date.sort_values(by='不良率 (%)', ascending=False, inplace=True)
+
     working_num_date['不良率 (%)'] = working_num_date['不良率 (%)'].apply(lambda x: f"{x:.2f}")
     for i in range(len(working_num_date)):
         if isinstance(working_num_date.loc[i, '完工日期'], datetime):
             working_num_date.loc[i, '完工日期'] = working_num_date.loc[i, '完工日期'].strftime('%Y-%m-%d')
+    working_num_date['all_info'] = working_num_date['機種代號'] + ', ' + working_num_date['不良項目']
 
 
 def loading_data():
